@@ -85,11 +85,27 @@ lab1_print_cur_status(void) {
 static void
 lab1_switch_to_user(void) {
     //LAB1 CHALLENGE 1 : TODO
+	asm volatile(
+		//设置新栈顶指向switchktou
+		//当返回出栈，出栈switchktou 中的值
+		"sub $0x8,%%esp \n"
+		"int %0 \n"//调用 T_SWITCH_TOU 中断
+		"movl %%ebp,%%esp"//恢复栈指针
+		:
+		: "i"(T_SWITCH_TOU)
+	);
 }
 
 static void
 lab1_switch_to_kernel(void) {
     //LAB1 CHALLENGE 1 :  TODO
+	//把tf->tf_cs和tf->tf_ds都设置为内核代码段和内核数据段
+	asm volatile(
+		"int %0 \n"// //调用T_SWITCH_TOK号中断
+		"movl %%ebp, %%esp \n"//强行改为内核态，会让cpu认为没有发生特权级转换，%esp的值就不对了
+		:
+		: "i"(T_SWITCH_TOK)
+	);
 }
 
 static void
