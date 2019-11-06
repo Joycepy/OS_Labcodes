@@ -8,6 +8,7 @@
 #include <default_pmm.h>
 #include <sync.h>
 #include <error.h>
+#include <buddy.h>
 
 /* *
  * Task State Segment:
@@ -128,7 +129,6 @@ gdt_init(void) {
 
     // reload all segment registers
     lgdt(&gdt_pd);
-
     // load the TSS
     ltr(GD_TSS);
 }
@@ -137,6 +137,7 @@ gdt_init(void) {
 static void
 init_pmm_manager(void) {
     pmm_manager = &default_pmm_manager;
+    //pmm_manager=&buddy_pmm_manager;
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }
