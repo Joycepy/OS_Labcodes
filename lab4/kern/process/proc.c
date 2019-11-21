@@ -87,21 +87,18 @@ alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
     if (proc != NULL) {
     //LAB4:EXERCISE1 YOUR CODE
-    /*
-     * below fields in proc_struct need to be initialized
-     *       enum proc_state state;                      // Process state
-     *       int pid;                                    // Process ID
-     *       int runs;                                   // the running times of Proces
-     *       uintptr_t kstack;                           // Process kernel stack
-     *       volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?
-     *       struct proc_struct *parent;                 // the parent process
-     *       struct mm_struct *mm;                       // Process's memory management field
-     *       struct context context;                     // Switch here to run process
-     *       struct trapframe *tf;                       // Trap frame for current interrupt
-     *       uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
-     *       uint32_t flags;                             // Process flag
-     *       char name[PROC_NAME_LEN + 1];               // Process name
-     */
+        proc->state = PROC_UNINIT; // 进程状态
+        proc->pid = -1; // 进程ID
+        proc->runs = 0; // 进程时间片
+        proc->kstack = 0; // 进程所使用的内存栈地址
+        proc->need_resched = NULL; // 进程是否能被调度
+        proc->parent = NULL; // 父进程
+        proc->mm = NULL; // 进程所用的虚拟内存
+        memset(&(proc->context), 0, sizeof(struct context)); // 进程的上下文
+        proc->tf = NULL; // 中断帧指针
+        proc->cr3 = boot_cr3; // 页目录表地址 设为 内核页目录表基址
+        proc->flags = 0; // 标志位
+        memset(&(proc->name), 0, PROC_NAME_LEN); // 进程名
     }
     return proc;
 }
@@ -163,14 +160,17 @@ proc_run(struct proc_struct *proc) {
     if (proc != current) {
         bool intr_flag;
         struct proc_struct *prev = current, *next = proc;
-        local_intr_save(intr_flag);
+        local_intr_save(intr_flag);// 关闭中断
         {
-            current = proc;
+            current = proc;// 将当前进程换为 要切换到的进程
+            // 设置任务状态段tss中的特权级0下的 esp0 指针为 next 内核线程 的内核栈的栈顶
             load_esp0(next->kstack + KSTACKSIZE);
+            // 重新加载 cr3 寄存器(页目录表基址) 进行进程间的页表切换
             lcr3(next->cr3);
+            // 调用 switch_to 进行上下文的保存与切换
             switch_to(&(prev->context), &(next->context));
         }
-        local_intr_restore(intr_flag);
+        local_intr_restore(intr_flag);//恢复IF位
     }
 }
 
@@ -296,6 +296,17 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    5. insert proc_struct into hash_list && proc_list
     //    6. call wakup_proc to make the new child process RUNNABLE
     //    7. set ret vaule using child proc's pid
+    if ((proc = alloc_proc()) == NULL)
+        goto fork_out;
+    if ((ret = setup_kstack(proc)) != 0)
+        goto fork_out;
+    if ((ret = copy_mm(clone_flags, proc)) != 0)
+        goto fork_out;
+    copy_thread(proc, stack, tf);
+    ret = proc->pid = get_pid();
+    hash_proc(proc);
+    list_add(&proc_list, &(proc->list_link));
+    wakeup_proc(proc);
 fork_out:
     return ret;
 
