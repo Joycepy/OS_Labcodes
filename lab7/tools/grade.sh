@@ -105,7 +105,7 @@ show_msg() {
     echo $1
     shift
     if [ $# -gt 0 ]; then
-        echo -e "$@" | awk '{printf "   %s\n", $0}'
+        echo -e"$@" | awk '{printf "   %s\n", $0}'
         echo
     fi
 }
@@ -344,8 +344,8 @@ default_check() {
     'PDE(001) fac00000-fb000000 00400000 -rw'                   \
     '  |-- PTE(000e0) faf00000-fafe0000 000e0000 urw'           \
     '  |-- PTE(00001) fafeb000-fafec000 00001000 -rw'		\
+    'check_slab() succeeded!'					\
     'check_vma_struct() succeeded!'                             \
-    'page fault at 0x00000100: K/W [no page found].'            \
     'check_pgfault() succeeded!'                                \
     'check_vmm() succeeded.'					\
     'page fault at 0x00001000: K/W [no page found].'            \
@@ -638,3 +638,4 @@ run_test -prog 'matrix'     -check default_check                \
 
 ## print final-score
 show_final
+

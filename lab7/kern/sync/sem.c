@@ -12,7 +12,12 @@ sem_init(semaphore_t *sem, int value) {
     sem->value = value;
     wait_queue_init(&(sem->wait_queue));
 }
-
+/*
+    V操作 也要关闭中断 并保存 eflag 寄存器的值 防止共享变量同时被多个线程访问或修改
+    先判断等待队列是否为空 若为空 则将计数值 加 1 并返回
+    若不为空 则说明还有线程在等待 此时取出等待队列的第一个线程 并将其 唤醒 唤醒的过程中 
+    将其从等待队列中删除
+*/
 static __noinline void __up(semaphore_t *sem, uint32_t wait_state) {
     bool intr_flag;
     local_intr_save(intr_flag);
@@ -28,7 +33,12 @@ static __noinline void __up(semaphore_t *sem, uint32_t wait_state) {
     }
     local_intr_restore(intr_flag);
 }
-
+/*
+    P操作 要关闭中断并保存 eflag 寄存器的值 避免共享变量被多个线程同时修改
+    判断 计数值是否大于 0 若大于 0 说明此时没有其他线程访问临界区 则直接将计数值 减 1 并 返回
+    若 计数值小于 0 则 已经有其他线程访问临界区了 就将当前线程放入等待队列中 并调用调度函数
+    等到进程被唤醒 再将当前进程从等待队列中 取出并删去 最后判断等待的线程是因为什么原因被唤醒
+*/
 static __noinline uint32_t __down(semaphore_t *sem, uint32_t wait_state) {
     bool intr_flag;
     local_intr_save(intr_flag);
