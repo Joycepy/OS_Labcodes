@@ -495,7 +495,6 @@ run_test -prog 'spin'  -check default_check                                     
 
 run_test -prog 'waitkill'  -check default_check                                      \
       - 'kernel_execve: pid = ., name = "waitkill".*'            \
-        'wait child 1.'                                         \
         'child 2.'                                              \
         'child 1.'                                              \
         'kill parent ok.'                                       \
